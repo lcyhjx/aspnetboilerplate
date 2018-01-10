@@ -11,6 +11,11 @@ namespace Abp.Domain.Uow
     public class UnitOfWorkOptions
     {
         /// <summary>
+        /// Scope option.
+        /// </summary>
+        public TransactionScopeOption? Scope { get; set; }
+
+        /// <summary>
         /// Is this UOW transactional?
         /// Uses default value if not supplied.
         /// </summary>
@@ -37,7 +42,7 @@ namespace Abp.Domain.Uow
         /// <summary>
         /// Can be used to enable/disable some filters. 
         /// </summary>
-        public List<DataFilterConfiguration> FilterOverrides { get; private set; }
+        public List<DataFilterConfiguration> FilterOverrides { get; }
 
         /// <summary>
         /// Creates a new <see cref="UnitOfWorkOptions"/> object.
@@ -49,11 +54,16 @@ namespace Abp.Domain.Uow
 
         internal void FillDefaultsForNonProvidedOptions(IUnitOfWorkDefaultOptions defaultOptions)
         {
-            //TODO: Do not change options object!!!
+            //TODO: Do not change options object..?
 
             if (!IsTransactional.HasValue)
             {
                 IsTransactional = defaultOptions.IsTransactional;
+            }
+
+            if (!Scope.HasValue)
+            {
+                Scope = defaultOptions.Scope;
             }
 
             if (!Timeout.HasValue && defaultOptions.Timeout.HasValue)
@@ -64,6 +74,19 @@ namespace Abp.Domain.Uow
             if (!IsolationLevel.HasValue && defaultOptions.IsolationLevel.HasValue)
             {
                 IsolationLevel = defaultOptions.IsolationLevel.Value;
+            }
+        }
+
+        internal void FillOuterUowFiltersForNonProvidedOptions(List<DataFilterConfiguration> filterOverrides)
+        {
+            foreach (var filterOverride in filterOverrides)
+            {
+                if (FilterOverrides.Any(fo => fo.FilterName == filterOverride.FilterName))
+                {
+                    continue;
+                }
+
+                FilterOverrides.Add(filterOverride);
             }
         }
     }

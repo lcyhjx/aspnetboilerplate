@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using System.Web.Http.Filters;
+using Abp.Application.Services;
 using Abp.Dependency;
 using Abp.Extensions;
 
@@ -18,9 +19,21 @@ namespace Abp.WebApi.Controllers.Dynamic.Builders
         private IFilter[] _filters;
         private Func<Type, string> _serviceNameSelector;
         private Func<Type, bool> _typePredicate;
+        private bool _conventionalVerbs;
+        private Action<IApiControllerActionBuilder<T>> _forMethodsAction;
+        private bool? _isApiExplorerEnabled;
+        private readonly IIocResolver _iocResolver;
+        private readonly IDynamicApiControllerBuilder _dynamicApiControllerBuilder;
+        private bool? _isProxyScriptingEnabled;
 
-        public BatchApiControllerBuilder(Assembly assembly, string servicePrefix)
+        public BatchApiControllerBuilder(
+            IIocResolver iocResolver,
+            IDynamicApiControllerBuilder dynamicApiControllerBuilder, 
+            Assembly assembly, 
+            string servicePrefix)
         {
+            _iocResolver = iocResolver;
+            _dynamicApiControllerBuilder = dynamicApiControllerBuilder;
             _assembly = assembly;
             _servicePrefix = servicePrefix;
         }
@@ -37,9 +50,33 @@ namespace Abp.WebApi.Controllers.Dynamic.Builders
             return this;
         }
 
+        public IBatchApiControllerBuilder<T> WithApiExplorer(bool isEnabled)
+        {
+            _isApiExplorerEnabled = isEnabled;
+            return this;
+        }
+
+        public IBatchApiControllerBuilder<T> WithProxyScripts(bool isEnabled)
+        {
+            _isProxyScriptingEnabled = isEnabled;
+            return this;
+        }
+
         public IBatchApiControllerBuilder<T> WithServiceName(Func<Type, string> serviceNameSelector)
         {
             _serviceNameSelector = serviceNameSelector;
+            return this;
+        }
+
+        public IBatchApiControllerBuilder<T> ForMethods(Action<IApiControllerActionBuilder> action)
+        {
+            _forMethodsAction = action;
+            return this;
+        }
+
+        public IBatchApiControllerBuilder<T> WithConventionalVerbs()
+        {
+            _conventionalVerbs = true;
             return this;
         }
 
@@ -49,7 +86,11 @@ namespace Abp.WebApi.Controllers.Dynamic.Builders
                 from
                     type in _assembly.GetTypes()
                 where
-                    type.IsPublic && type.IsInterface && typeof(T).IsAssignableFrom(type) && IocManager.Instance.IsRegistered(type)
+                    (type.IsPublic || type.IsNestedPublic) && 
+                    type.IsInterface && 
+                    typeof(T).IsAssignableFrom(type) &&
+                    _iocResolver.IsRegistered(type) &&
+                    !RemoteServiceAttribute.IsExplicitlyDisabledFor(type)
                 select
                     type;
 
@@ -69,10 +110,10 @@ namespace Abp.WebApi.Controllers.Dynamic.Builders
                     serviceName = _servicePrefix + "/" + serviceName;
                 }
 
-                var builder = typeof(DynamicApiControllerBuilder)
-                    .GetMethod("For", BindingFlags.Public | BindingFlags.Static)
+                var builder = typeof(IDynamicApiControllerBuilder)
+                    .GetMethod("For", BindingFlags.Public | BindingFlags.Instance)
                     .MakeGenericMethod(type)
-                    .Invoke(null, new object[] { serviceName });
+                    .Invoke(_dynamicApiControllerBuilder, new object[] { serviceName });
 
                 if (_filters != null)
                 {
@@ -81,28 +122,45 @@ namespace Abp.WebApi.Controllers.Dynamic.Builders
                         .Invoke(builder, new object[] { _filters });
                 }
 
+                if (_isApiExplorerEnabled != null)
+                {
+                    builder.GetType()
+                        .GetMethod("WithApiExplorer", BindingFlags.Public | BindingFlags.Instance)
+                        .Invoke(builder, new object[] { _isApiExplorerEnabled });
+                }
+
+                if (_isProxyScriptingEnabled != null)
+                {
+                    builder.GetType()
+                        .GetMethod("WithProxyScripts", BindingFlags.Public | BindingFlags.Instance)
+                        .Invoke(builder, new object[] { _isProxyScriptingEnabled.Value });
+                }
+
+                if (_conventionalVerbs)
+                {
+                    builder.GetType()
+                       .GetMethod("WithConventionalVerbs", BindingFlags.Public | BindingFlags.Instance)
+                       .Invoke(builder, new object[0]);
+                }
+
+                if (_forMethodsAction != null)
+                {
+                    builder.GetType()
+                        .GetMethod("ForMethods", BindingFlags.Public | BindingFlags.Instance)
+                        .Invoke(builder, new object[] { _forMethodsAction });
+                }
+
                 builder.GetType()
                         .GetMethod("Build", BindingFlags.Public | BindingFlags.Instance)
                         .Invoke(builder, new object[0]);
             }
         }
-
+        
         public static string GetConventionalServiceName(Type type)
         {
             var typeName = type.Name;
 
-            if (typeName.EndsWith("ApplicationService"))
-            {
-                typeName = typeName.Substring(0, typeName.Length - "ApplicationService".Length);
-            }
-            else if (typeName.EndsWith("AppService"))
-            {
-                typeName = typeName.Substring(0, typeName.Length - "AppService".Length);
-            }
-            else if (typeName.EndsWith("Service"))
-            {
-                typeName = typeName.Substring(0, typeName.Length - "Service".Length);
-            }
+            typeName = typeName.RemovePostFix(ApplicationService.CommonPostfixes);
 
             if (typeName.Length > 1 && typeName.StartsWith("I") && char.IsUpper(typeName, 1))
             {

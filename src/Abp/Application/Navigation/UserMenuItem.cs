@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Abp.Localization;
 
 namespace Abp.Application.Navigation
 {
@@ -23,9 +24,34 @@ namespace Abp.Application.Navigation
         public string DisplayName { get; private set; }
 
         /// <summary>
+        /// The Display order of the menu. Optional.
+        /// </summary>
+        public int Order { get; set; }
+
+        /// <summary>
         /// The URL to navigate when this menu item is selected.
         /// </summary>
         public string Url { get; set; }
+
+        /// <summary>
+        /// A custom object related to this menu item.
+        /// </summary>
+        public object CustomData { get; set; }
+
+        /// <summary>
+        /// Target of the menu item. Can be "_blank", "_self", "_parent", "_top" or a frame name.
+        /// </summary>
+        public string Target { get; set; }
+
+        /// <summary>
+        /// Can be used to enable/disable a menu item.
+        /// </summary>
+        public bool IsEnabled { get; set; }
+
+        /// <summary>
+        /// Can be used to show/hide a menu item.
+        /// </summary>
+        public bool IsVisible { get; set; }
 
         /// <summary>
         /// Sub items of this menu item.
@@ -43,12 +69,18 @@ namespace Abp.Application.Navigation
         /// <summary>
         /// Creates a new <see cref="UserMenuItem"/> object from given <see cref="MenuItemDefinition"/>.
         /// </summary>
-        internal UserMenuItem(MenuItemDefinition menuItemDefinition)
+        internal UserMenuItem(MenuItemDefinition menuItemDefinition, ILocalizationContext localizationContext)
         {
             Name = menuItemDefinition.Name;
             Icon = menuItemDefinition.Icon;
-            DisplayName = menuItemDefinition.DisplayName.Localize();
+            DisplayName = menuItemDefinition.DisplayName.Localize(localizationContext);
+            Order = menuItemDefinition.Order;
             Url = menuItemDefinition.Url;
+            CustomData = menuItemDefinition.CustomData;
+            Target = menuItemDefinition.Target;
+            IsEnabled = menuItemDefinition.IsEnabled;
+            IsVisible = menuItemDefinition.IsVisible;
+
             Items = new List<UserMenuItem>();
         }
     }

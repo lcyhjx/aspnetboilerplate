@@ -1,6 +1,6 @@
 using System.Text;
 using Abp.Extensions;
-using Abp.WebApi.Controllers.Dynamic.Scripting.jQuery.Actions;
+using Abp.Web.Api.ProxyScripting.Generators;
 
 namespace Abp.WebApi.Controllers.Dynamic.Scripting.jQuery
 {
@@ -34,14 +34,14 @@ namespace Abp.WebApi.Controllers.Dynamic.Scripting.jQuery
             //generate amd module definition
             if (_defineAmdModule)
             {
-                script.AppendLine("    if(define && typeof define === 'function' && define.amd){");
+                script.AppendLine("    if(typeof define === 'function' && define.amd){");
                 script.AppendLine("        define(function (require, exports, module) {");
                 script.AppendLine("            return {");
 
                 var methodNo = 0;
                 foreach (var methodInfo in _controllerInfo.Actions.Values)
                 {
-                    script.AppendLine("                " + methodInfo.ActionName.ToCamelCase() + ": serviceNamespace." + methodInfo.ActionName.ToCamelCase() + ((methodNo++) < (_controllerInfo.Actions.Count - 1) ? "," : ""));
+                    script.AppendLine("                '" + methodInfo.ActionName.ToCamelCase() + "' : serviceNamespace" + ProxyScriptingJsFuncHelper.WrapWithBracketsOrWithDotPrefix(methodInfo.ActionName.ToCamelCase()) + ((methodNo++) < (_controllerInfo.Actions.Count - 1) ? "," : ""));
                 }
 
                 script.AppendLine("            };");
@@ -57,7 +57,7 @@ namespace Abp.WebApi.Controllers.Dynamic.Scripting.jQuery
 
         private static void AppendMethod(StringBuilder script, DynamicApiControllerInfo controllerInfo, DynamicApiActionInfo methodInfo)
         {
-            var generator = methodInfo.Verb.CreateActionScriptProxyGenerator(controllerInfo, methodInfo);
+            var generator = new JQueryActionScriptGenerator(controllerInfo, methodInfo);
             script.AppendLine(generator.GenerateMethod());
         }
     }

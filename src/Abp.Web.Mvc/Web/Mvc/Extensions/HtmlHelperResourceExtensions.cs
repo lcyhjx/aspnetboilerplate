@@ -5,12 +5,10 @@ using System.Web;
 using System.Web.Mvc;
 using Abp.Logging;
 using Abp.Web.Mvc.Resources;
+using System.Text.RegularExpressions;
 
 namespace Abp.Web.Mvc.Extensions
 {
-    /// <summary>
-    /// TODO: What if resource changes? How to update cache?
-    /// </summary>
     public static class HtmlHelperResourceExtensions
     {
         private static readonly ConcurrentDictionary<string, string> Cache;
@@ -58,11 +56,19 @@ namespace Abp.Web.Mvc.Extensions
                 string result;
                 try
                 {
-                    //TODO: Refactor...
-                    var fullPath = HttpContext.Current.Server.MapPath(path.Replace("/", "\\"));
-                    result = File.Exists(fullPath)
-                        ? GetPathWithVersioningForPhysicalFile(path, fullPath)
-                        : GetPathWithVersioningForEmbeddedFile(path);
+                    // CDN resource
+                    if (path.StartsWith("http://", StringComparison.CurrentCultureIgnoreCase) || path.StartsWith("//", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        //Replace "http://" from beginning
+                        result = Regex.Replace(path, @"^http://", "//", RegexOptions.IgnoreCase);
+                    }
+                    else
+                    {
+                        var fullPath = HttpContext.Current.Server.MapPath(path.Replace("/", "\\"));
+                        result = File.Exists(fullPath)
+                            ? GetPathWithVersioningForPhysicalFile(path, fullPath)
+                            : GetPathWithVersioningForEmbeddedFile(path);
+                    }
                 }
                 catch (Exception ex)
                 {

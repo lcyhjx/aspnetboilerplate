@@ -13,7 +13,7 @@ namespace Abp.Localization
         public static NullLocalizationManager Instance { get { return SingletonInstance; } }
         private static readonly NullLocalizationManager SingletonInstance = new NullLocalizationManager();
 
-        public LanguageInfo CurrentLanguage { get { return new LanguageInfo(Thread.CurrentThread.CurrentUICulture.Name, Thread.CurrentThread.CurrentUICulture.DisplayName); } }
+        public LanguageInfo CurrentLanguage { get { return new LanguageInfo(CultureInfo.CurrentUICulture.Name, CultureInfo.CurrentUICulture.DisplayName); } }
 
         private readonly IReadOnlyList<LanguageInfo> _emptyLanguageArray = new LanguageInfo[0];
 
@@ -37,16 +37,6 @@ namespace Abp.Localization
         public IReadOnlyList<ILocalizationSource> GetAllSources()
         {
             return _emptyLocalizationSourceArray;
-        }
-
-        public string GetString(string sourceName, string name)
-        {
-            return name;
-        }
-
-        public string GetString(string sourceName, string name, CultureInfo culture)
-        {
-            return name;
         }
     }
 }

@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Abp.Collections
 {
     /// <summary>
     /// A shortcut for <see cref="TypeList{TBaseType}"/> to use object as base type.
     /// </summary>
-    public class TypeList : TypeList<object>
+    public class TypeList : TypeList<object>, ITypeList
     {
     }
 
@@ -133,7 +134,7 @@ namespace Abp.Collections
 
         private static void CheckType(Type item)
         {
-            if (!typeof(TBaseType).IsAssignableFrom(item))
+            if (!typeof(TBaseType).GetTypeInfo().IsAssignableFrom(item))
             {
                 throw new ArgumentException("Given item is not type of " + typeof(TBaseType).AssemblyQualifiedName, "item");
             }

@@ -1,4 +1,6 @@
-﻿namespace Abp.Localization.Sources
+﻿using Abp.Localization.Dictionaries;
+
+namespace Abp.Localization.Sources
 {
     /// <summary>
     /// Used to store a localization source extension information.
@@ -20,7 +22,7 @@
         /// </summary>
         /// <param name="sourceName">Source name</param>
         /// <param name="dictionaryProvider">Extension dictionaries</param>
-        internal LocalizationSourceExtensionInfo(string sourceName, ILocalizationDictionaryProvider dictionaryProvider)
+        public LocalizationSourceExtensionInfo(string sourceName, ILocalizationDictionaryProvider dictionaryProvider)
         {
             SourceName = sourceName;
             DictionaryProvider = dictionaryProvider;

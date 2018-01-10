@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Abp.Dependency;
 using Abp.Domain.Entities;
+using Abp.Domain.Uow;
+using Abp.MultiTenancy;
+using Abp.Reflection.Extensions;
 
 namespace Abp.Domain.Repositories
 {
@@ -16,8 +20,31 @@ namespace Abp.Domain.Repositories
     public abstract class AbpRepositoryBase<TEntity, TPrimaryKey> : IRepository<TEntity, TPrimaryKey>
         where TEntity : class, IEntity<TPrimaryKey>
     {
+        /// <summary>
+        /// The multi tenancy side
+        /// </summary>
+        public static MultiTenancySides? MultiTenancySide { get; private set; }
+
+        public IUnitOfWorkManager UnitOfWorkManager { get; set; }
+
+        public IIocResolver IocResolver { get; set; }
+
+        static AbpRepositoryBase()
+        {
+            var attr = typeof (TEntity).GetSingleAttributeOfTypeOrBaseTypesOrNull<MultiTenancySideAttribute>();
+            if (attr != null)
+            {
+                MultiTenancySide = attr.Side;
+            }
+        }
+
         public abstract IQueryable<TEntity> GetAll();
-        
+
+        public virtual IQueryable<TEntity> GetAllIncluding(params Expression<Func<TEntity, object>>[] propertySelectors)
+        {
+            return GetAll();
+        }
+
         public virtual List<TEntity> GetAllList()
         {
             return GetAll().ToList();
@@ -48,7 +75,7 @@ namespace Abp.Domain.Repositories
             var entity = FirstOrDefault(id);
             if (entity == null)
             {
-                throw new AbpException("There is no such an entity with given primary key. Entity type: " + typeof(TEntity).FullName + ", primary key: " + id);
+                throw new EntityNotFoundException(typeof(TEntity), id);
             }
 
             return entity;
@@ -59,7 +86,7 @@ namespace Abp.Domain.Repositories
             var entity = await FirstOrDefaultAsync(id);
             if (entity == null)
             {
-                throw new AbpException("There is no such an entity with given primary key. Entity type: " + typeof(TEntity).FullName + ", primary key: " + id);
+                throw new EntityNotFoundException(typeof(TEntity), id);
             }
 
             return entity;
@@ -119,14 +146,14 @@ namespace Abp.Domain.Repositories
 
         public virtual TEntity InsertOrUpdate(TEntity entity)
         {
-            return EqualityComparer<TPrimaryKey>.Default.Equals(entity.Id, default(TPrimaryKey))
+            return entity.IsTransient()
                 ? Insert(entity)
                 : Update(entity);
         }
         
         public virtual async Task<TEntity> InsertOrUpdateAsync(TEntity entity)
         {
-            return EqualityComparer<TPrimaryKey>.Default.Equals(entity.Id, default(TPrimaryKey))
+            return entity.IsTransient()
                 ? await InsertAsync(entity)
                 : await UpdateAsync(entity);
         }
@@ -164,16 +191,18 @@ namespace Abp.Domain.Repositories
 
         public abstract void Delete(TEntity entity);
         
-        public virtual async Task DeleteAsync(TEntity entity)
+        public virtual Task DeleteAsync(TEntity entity)
         {
             Delete(entity);
+            return Task.FromResult(0);
         }
 
         public abstract void Delete(TPrimaryKey id);
         
-        public virtual async Task DeleteAsync(TPrimaryKey id)
+        public virtual Task DeleteAsync(TPrimaryKey id)
         {
             Delete(id);
+            return Task.FromResult(0);
         }
 
         public virtual void Delete(Expression<Func<TEntity, bool>> predicate)
@@ -184,9 +213,10 @@ namespace Abp.Domain.Repositories
             }
         }
 
-        public virtual async Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
             Delete(predicate);
+            return Task.FromResult(0);
         }
 
         public virtual int Count()

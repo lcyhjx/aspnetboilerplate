@@ -1,6 +1,6 @@
 ﻿var abp = abp || {};
 (function ($) {
-    if (!sweetAlert || !jQuery) {
+    if (!sweetAlert || !$) {
         return;
     }
 
@@ -13,24 +13,21 @@
 
             },
             info: {
-                type: 'info'
+                icon: 'info'
             },
             success: {
-                type: 'success'
+                icon: 'success'
             },
             warn: {
-                type: 'warning'
+                icon: 'warning'
             },
             error: {
-                type: 'error'
+                icon: 'error'
             },
             confirm: {
-                type: 'warning',
-                title: abp.localization.abpWeb('AreYouSure'),
-                showCancelButton: true,
-                cancelButtonText: abp.localization.abpWeb('Cancel'),
-                confirmButtonColor: "#DD6B55",
-                confirmButtonText: abp.localization.abpWeb('Yes')
+                icon: 'warning',
+                title: 'Are you sure?',
+                buttons: ['Cancel', 'Yes']
             }
         }
     };
@@ -45,7 +42,7 @@
 
         var opts = $.extend(
             {},
-            abp.libs.sweetAlert.config.default,
+            abp.libs.sweetAlert.config['default'],
             abp.libs.sweetAlert.config[type],
             {
                 title: title,
@@ -53,27 +50,30 @@
             }
         );
 
-        sweetAlert(opts);
+        return $.Deferred(function ($dfd) {
+            sweetAlert(opts).then(function () {
+                $dfd.resolve();
+            });
+        });
     };
 
     abp.message.info = function (message, title) {
-        showMessage('info', message, title);
+        return showMessage('info', message, title);
     };
 
     abp.message.success = function (message, title) {
-        showMessage('success', message, title);
+        return showMessage('success', message, title);
     };
 
     abp.message.warn = function (message, title) {
-        showMessage('warn', message, title);
+        return showMessage('warn', message, title);
     };
 
     abp.message.error = function (message, title) {
-        showMessage('error', message, title);
+        return showMessage('error', message, title);
     };
 
     abp.message.confirm = function (message, titleOrCallback, callback) {
-
         var userOpts = {
             text: message
         };
@@ -86,14 +86,22 @@
 
         var opts = $.extend(
             {},
-            abp.libs.sweetAlert.config.default,
+            abp.libs.sweetAlert.config['default'],
             abp.libs.sweetAlert.config.confirm,
             userOpts
         );
 
-        sweetAlert(opts, function (isConfirmed) {
-            callback && callback(isConfirmed);
+        return $.Deferred(function ($dfd) {
+            sweetAlert(opts).then(function (isConfirmed) {
+                callback && callback(isConfirmed);
+                $dfd.resolve(isConfirmed);
+            });
         });
     };
+
+    abp.event.on('abp.dynamicScriptsInitialized', function () {
+        abp.libs.sweetAlert.config.confirm.title = abp.localization.abpWeb('AreYouSure');
+        abp.libs.sweetAlert.config.confirm.buttons = [abp.localization.abpWeb('Cancel'), abp.localization.abpWeb('Yes')];
+    });
 
 })(jQuery);

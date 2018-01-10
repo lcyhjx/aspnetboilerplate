@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Abp.WebApi.Client
@@ -20,6 +23,21 @@ namespace Abp.WebApi.Client
         TimeSpan Timeout { get; set; }
 
         /// <summary>
+        /// Used to set cookies for requests.
+        /// </summary>
+        Collection<Cookie> Cookies { get; }
+
+        /// <summary>
+        /// Request headers.
+        /// </summary>
+        ICollection<NameValue> RequestHeaders { get; }
+
+        /// <summary>
+        /// Response headers.
+        /// </summary>
+        ICollection<NameValue> ResponseHeaders { get; }
+
+        /// <summary>
         /// Makes post request that does not get or return value.
         /// </summary>
         /// <param name="url">Url</param>
@@ -39,7 +57,7 @@ namespace Abp.WebApi.Client
         /// </summary>
         /// <param name="url">Url</param>
         /// <param name="timeout">Timeout as milliseconds</param>
-        Task<TResult> PostAsync<TResult>(string url, int? timeout = null) where TResult : class, new();
+        Task<TResult> PostAsync<TResult>(string url, int? timeout = null) where TResult : class;
 
         /// <summary>
         /// Makes post request that gets input and returns value.
@@ -47,6 +65,6 @@ namespace Abp.WebApi.Client
         /// <param name="url">Url</param>
         /// <param name="input">Input</param>
         /// <param name="timeout">Timeout as milliseconds</param>
-        Task<TResult> PostAsync<TResult>(string url, object input, int? timeout = null) where TResult : class, new();
+        Task<TResult> PostAsync<TResult>(string url, object input, int? timeout = null) where TResult : class;
     }
 }
